@@ -66,7 +66,13 @@ export default function App() {
       const res = await axios.post(API_URL, { question });
       setResponse(res.data);
     } catch (err) {
-      setError("Something went wrong. Is the backend running?");
+      if (err.response?.status === 429) {
+        setError(err.response.data);
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("Something went wrong. Is the backend running?");
+      }
     } finally {
       setLoading(false);
     }
