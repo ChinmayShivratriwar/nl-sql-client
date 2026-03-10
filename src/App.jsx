@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./App.css";
 
-const API_URL = "http://localhost:8080/api/v1/query";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 /* ——— Time-based Greeting ——— */
 function getGreeting() {
@@ -53,6 +53,8 @@ export default function App() {
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [jsonOpen, setJsonOpen] = useState(false);
+  const [slowWarning, setSlowWarning] = useState(false);
+  const heartbeatRef = useRef(null);
 
   const handleSubmit = async () => {
     if (!question.trim()) return;
@@ -61,9 +63,14 @@ export default function App() {
     setResponse(null);
     setJsonOpen(false);
     setCopied(false);
+    setSlowWarning(false);
+
+    const slowTimer = setTimeout(() => {
+      setSlowWarning(true);
+    }, 30000);
 
     try {
-      const res = await axios.post(API_URL, { question });
+      const res = await axios.post(`${API_URL}/api/v1/query`, { question });
       setResponse(res.data);
     } catch (err) {
       if (err.response?.status === 429) {
@@ -74,9 +81,52 @@ export default function App() {
         setError("Something went wrong. Is the backend running?");
       }
     } finally {
+      clearTimeout(slowTimer);
+      setSlowWarning(false);
       setLoading(false);
     }
   };
+
+  /* ——— Lazy Heartbeat (keeps Render alive) ——— */
+  useEffect(() => {
+    const HEARTBEAT_INTERVAL = 13 * 60 * 1000; // 13 minutes
+
+    const startHeartbeat = () => {
+      // Ping immediately when tab becomes visible
+      axios.get(`${API_URL}/api/v1/query/health`).catch(() => { });
+      // Then ping every 13 minutes
+      heartbeatRef.current = setInterval(() => {
+        axios.get(`${API_URL}/api/v1/query/health`).catch(() => { });
+      }, HEARTBEAT_INTERVAL);
+    };
+
+    const stopHeartbeat = () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        startHeartbeat();
+      } else {
+        stopHeartbeat();
+      }
+    };
+
+    // Start heartbeat if tab is already visible on mount
+    if (document.visibilityState === "visible") {
+      startHeartbeat();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      stopHeartbeat();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
@@ -158,6 +208,12 @@ export default function App() {
             <div className="skeleton-line"></div>
             <div className="skeleton-line"></div>
           </div>
+          {slowWarning && (
+            <div className="slow-warning">
+              <span className="slow-warning-icon">☕</span>
+              Render is waking up after inactivity, first request may take up to 60 seconds. Please wait...
+            </div>
+          )}
         </div>
       )}
 
