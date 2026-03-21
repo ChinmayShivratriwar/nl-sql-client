@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./App.css";
+import SchemaVisualizer from "./SchemaVisualizer";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -54,6 +55,10 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [jsonOpen, setJsonOpen] = useState(false);
   const [slowWarning, setSlowWarning] = useState(false);
+  const [schema, setSchema] = useState(null);
+  const [schemaLoading, setSchemaLoading] = useState(true);
+  const [schemaOpen, setSchemaOpen] = useState(false);
+  const [schemaError, setSchemaError] = useState(null);
   const heartbeatRef = useRef(null);
 
   const handleSubmit = async () => {
@@ -86,6 +91,35 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  /* ——— Fetch Database Schema on mount ——— */
+  useEffect(() => {
+    const fetchSchema = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/v1/query/schema`, {
+          headers: { 'X-Internal-Key': import.meta.env.VITE_SCHEMA_KEY }
+        });
+        // Handle both string and object responses
+        const data = res.data;
+        setSchema(typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+        setSchemaError(null);
+      } catch (err) {
+        console.error("Failed to fetch schema", err);
+        setSchema(null);
+        const status = err.response?.status;
+        if (status === 401 || status === 403) {
+          setSchemaError(`Access denied (${status}): Check VITE_SCHEMA_KEY in your .env`);
+        } else if (status) {
+          setSchemaError(`Server returned ${status}: ${err.response?.data?.error || err.message}`);
+        } else {
+          setSchemaError("Could not reach backend. Is it running?");
+        }
+      } finally {
+        setSchemaLoading(false);
+      }
+    };
+    fetchSchema();
+  }, []);
 
   /* ——— Lazy Heartbeat (keeps Render alive) ——— */
   useEffect(() => {
@@ -152,6 +186,45 @@ export default function App() {
           Engine Ready
         </div>
       </header>
+
+      {/* Database Schema */}
+      {!schemaLoading && (
+        <section className="schema-section">
+          {schema ? (
+            <div className="schema-card">
+              <div
+                className="schema-card-header"
+                onClick={() => setSchemaOpen(!schemaOpen)}
+              >
+                <div className="schema-card-title">
+                  <span>🗂️</span> Database Schema
+                </div>
+                <div className="schema-toggle">
+                  {schemaOpen ? "Collapse" : "View Tables & Columns"}
+                  <span className={`schema-toggle-icon ${schemaOpen ? "open" : ""}`}>
+                    ▾
+                  </span>
+                </div>
+              </div>
+              <div className={`schema-body ${schemaOpen ? "open" : ""}`}>
+                <SchemaVisualizer schema={schema} />
+              </div>
+            </div>
+          ) : schemaError ? (
+            <div className="schema-card">
+              <div className="schema-card-header" style={{ cursor: 'default' }}>
+                <div className="schema-card-title">
+                  <span>🗂️</span> Database Schema
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--accent-red, #f87171)' }}>Unavailable</span>
+              </div>
+              <div className="schema-body open" style={{ padding: '0.75rem 1rem' }}>
+                <p style={{ color: 'var(--accent-red, #f87171)', margin: 0, fontSize: '0.85rem' }}>⚠️ {schemaError}</p>
+              </div>
+            </div>
+          ) : null}
+        </section>
+      )}
 
       {/* Query Input */}
       <section className="query-section">
