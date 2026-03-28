@@ -1005,3 +1005,318 @@
   color: var(--text-tertiary);
   text-align: center;
 }
+
+/* ===== DB Mode Toggle ===== */
+.db-mode-toggle {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-primary);
+  border-radius: 100px;
+  padding: 3px;
+  margin-bottom: var(--space-md);
+  gap: 2px;
+}
+
+.db-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.db-mode-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.db-mode-btn.active {
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+}
+
+.db-mode-connected-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 5px rgba(34, 197, 94, 0.5);
+  animation: pulse-glow 2s ease infinite;
+  flex-shrink: 0;
+}
+
+/* ===== Connected Badge (in card header) ===== */
+.db-connected-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  margin-left: 8px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ===== DB Connect Panel ===== */
+.db-connect-panel {
+  padding: var(--space-lg);
+  border-top: 1px solid var(--border-primary);
+}
+
+.db-connect-form {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.db-field-host { grid-column: 1; }
+.db-field-port { grid-column: 2; }
+.db-field-full { grid-column: 1 / -1; }
+.db-field-half { grid-column: span 1; }
+
+.db-connect-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+}
+
+.db-connect-input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.db-connect-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.db-connect-input:focus {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(12, 12, 20, 1);
+}
+
+/* Password field wrapper */
+.db-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.db-password-wrapper .db-connect-input {
+  padding-right: 38px;
+}
+
+.db-show-pass-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+  opacity: 0.5;
+  transition: opacity var(--transition-fast);
+  line-height: 1;
+}
+
+.db-show-pass-btn:hover {
+  opacity: 1;
+}
+
+/* Error banner inside panel */
+.db-connect-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.07);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  color: var(--error);
+  line-height: 1.5;
+  margin-bottom: var(--space-md);
+  animation: fadeInUp 0.3s ease;
+}
+
+/* Actions row */
+.db-connect-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.db-connect-hint {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Test Connection button — matches .submit-btn */
+.db-test-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: linear-gradient(135deg, var(--accent), #7c3aed);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 9px 20px;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 12px rgba(99, 102, 241, 0.25);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.db-test-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+}
+
+.db-test-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Connect success state */
+.db-connect-success {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  background: rgba(34, 197, 94, 0.06);
+  border: 1px solid rgba(34, 197, 94, 0.14);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  animation: fadeInUp 0.35s ease;
+}
+
+.db-connect-success-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.db-connect-success-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+  flex-shrink: 0;
+  animation: pulse-glow 2s ease infinite;
+}
+
+.db-connect-success-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--success);
+  margin-bottom: 2px;
+}
+
+.db-connect-success-sub {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+/* Disconnect button */
+.db-disconnect-btn {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: var(--error);
+  border-radius: var(--radius-md);
+  padding: 7px 14px;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.db-disconnect-btn:hover {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Responsive — stack form to single column */
+@media (max-width: 600px) {
+  .db-connect-form {
+    grid-template-columns: 1fr;
+  }
+
+  .db-field-host,
+  .db-field-port,
+  .db-field-full,
+  .db-field-half {
+    grid-column: 1;
+  }
+
+  .db-connect-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .db-test-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ===== No-schema notice ===== */
+.db-no-schema-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-primary);
+  font-size: 0.82rem;
+}
+
+.db-no-schema-title {
+  font-weight: 600;
+  color: var(--success);
+  margin-bottom: 3px;
+}
+
+.db-no-schema-sub {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./App.css";
 import SchemaVisualizer from "./SchemaVisualizer";
+import DbConnectPanel from "./DbConnectPanel";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -61,6 +62,21 @@ export default function App() {
   const [schemaError, setSchemaError] = useState(null);
   const heartbeatRef = useRef(null);
 
+  // ── Custom DB state — hydrated from sessionStorage so refresh keeps the session alive ──
+  const [dbMode, setDbMode] = useState(
+    () => sessionStorage.getItem("db_mode") || "default"
+  );
+  const [dbToken, setDbToken] = useState(
+    () => sessionStorage.getItem("db_token") || null
+  );
+  const [dbDisplay, setDbDisplay] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem("db_display")); } catch { return null; }
+  });
+  const [customSchema, setCustomSchema] = useState(
+    () => sessionStorage.getItem("db_schema") || null
+  );
+  const [customDbOpen, setCustomDbOpen] = useState(false);
+
   const handleSubmit = async () => {
     if (!question.trim()) return;
     setLoading(true);
@@ -75,7 +91,11 @@ export default function App() {
     }, 30000);
 
     try {
-      const res = await axios.post(`${API_URL}/api/v1/query`, { question });
+      const payload = { question };
+      if (dbMode === "custom" && dbToken) {
+        payload.sessionToken = dbToken;   // backend: { question, sessionToken }
+      }
+      const res = await axios.post(`${API_URL}/api/v1/query`, payload);
       setResponse(res.data);
     } catch (err) {
       if (err.response?.status === 429) {
@@ -90,6 +110,38 @@ export default function App() {
       setSlowWarning(false);
       setLoading(false);
     }
+  };
+
+  /* ——— Custom DB handlers ——— */
+  // schema: string | null, token: JWT string, display: { host, port, dbName, username }
+  const handleDbConnect = (schema, token, display) => {
+    setDbToken(token);
+    setDbDisplay(display);
+    setCustomSchema(schema);
+    setDbMode("custom");
+    setCustomDbOpen(false);
+    // Persist across refresh (sessionStorage clears when tab closes)
+    sessionStorage.setItem("db_token", token);
+    sessionStorage.setItem("db_display", JSON.stringify(display));
+    sessionStorage.setItem("db_mode", "custom");
+    if (schema) sessionStorage.setItem("db_schema", schema);
+    else sessionStorage.removeItem("db_schema");
+  };
+
+  const handleDbDisconnect = () => {
+    // Tell backend to invalidate the session token (fire-and-forget)
+    if (dbToken) {
+      axios.post(`${API_URL}/api/v1/query/disconnect`, { sessionToken: dbToken }).catch(() => {});
+    }
+    setDbToken(null);
+    setDbDisplay(null);
+    setCustomSchema(null);
+    setDbMode("default");
+    // Clear sessionStorage
+    sessionStorage.removeItem("db_token");
+    sessionStorage.removeItem("db_display");
+    sessionStorage.removeItem("db_mode");
+    sessionStorage.removeItem("db_schema");
   };
 
   /* ——— Fetch Database Schema on mount ——— */
@@ -188,9 +240,34 @@ export default function App() {
       </header>
 
       {/* Database Schema */}
-      {!schemaLoading && (
-        <section className="schema-section">
-          {schema ? (
+      <section className="schema-section">
+        {/* ── Mode Toggle pill ── */}
+        <div className="db-mode-toggle">
+          <button
+            className={`db-mode-btn ${dbMode === "default" ? "active" : ""}`}
+            onClick={() => {
+              setDbMode("default");
+              if (dbMode === "custom") handleDbDisconnect();
+            }}
+          >
+            🗄️ Default DB
+          </button>
+          <button
+            className={`db-mode-btn ${dbMode === "custom" ? "active" : ""}`}
+            onClick={() => {
+              setDbMode("custom");
+              // Only open the credential form if not already connected
+              if (!dbToken) setCustomDbOpen(true);
+            }}
+          >
+            🔌 Connect Custom DB
+            {dbMode === "custom" && <span className="db-mode-connected-dot" />}
+          </button>
+        </div>
+
+        {/* ── Default DB schema ── */}
+        {dbMode === "default" && !schemaLoading && (
+          schema ? (
             <div className="schema-card">
               <div
                 className="schema-card-header"
@@ -212,19 +289,86 @@ export default function App() {
             </div>
           ) : schemaError ? (
             <div className="schema-card">
-              <div className="schema-card-header" style={{ cursor: 'default' }}>
+              <div className="schema-card-header" style={{ cursor: "default" }}>
                 <div className="schema-card-title">
                   <span>🗂️</span> Database Schema
                 </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--accent-red, #f87171)' }}>Unavailable</span>
+                <span style={{ fontSize: "0.75rem", color: "var(--accent-red, #f87171)" }}>Unavailable</span>
               </div>
-              <div className="schema-body open" style={{ padding: '0.75rem 1rem' }}>
-                <p style={{ color: 'var(--accent-red, #f87171)', margin: 0, fontSize: '0.85rem' }}>⚠️ {schemaError}</p>
+              <div className="schema-body open" style={{ padding: "0.75rem 1rem" }}>
+                <p style={{ color: "var(--accent-red, #f87171)", margin: 0, fontSize: "0.85rem" }}>⚠️ {schemaError}</p>
               </div>
             </div>
-          ) : null}
-        </section>
-      )}
+          ) : null
+        )}
+
+        {/* ── Custom DB panel ── */}
+        {dbMode === "custom" && (
+          <div className="schema-card">
+            {/* Panel header */}
+            <div
+              className="schema-card-header"
+              onClick={() => dbToken && setCustomDbOpen(!customDbOpen)}
+              style={{ cursor: dbToken ? "pointer" : "default" }}
+            >
+              <div className="schema-card-title">
+                <span>🔌</span> Custom Database
+                {dbToken && <span className="db-connected-badge">Connected</span>}
+              </div>
+              {dbToken && (
+                <div className="schema-toggle">
+                  {customDbOpen ? "Collapse" : "Edit Connection"}
+                  <span className={`schema-toggle-icon ${customDbOpen ? "open" : ""}`}>▾</span>
+                </div>
+              )}
+            </div>
+
+            {/* Always show form when not yet connected, or when editing */}
+            <div className={`schema-body ${(!dbToken || customDbOpen) ? "open" : ""}`}>
+              <DbConnectPanel
+                onConnect={handleDbConnect}
+                onDisconnect={handleDbDisconnect}
+                isConnected={!!dbToken}
+                displayInfo={dbDisplay}
+              />
+            </div>
+
+            {/* Show custom schema when connected and form is collapsed */}
+            {dbToken && !customDbOpen && (
+              customSchema ? (
+                <div>
+                  <div
+                    className="schema-card-header"
+                    style={{ borderTop: "1px solid var(--border-primary)", cursor: "pointer" }}
+                    onClick={() => setSchemaOpen(!schemaOpen)}
+                  >
+                    <div className="schema-card-title">
+                      <span>🗂️</span> Custom DB Schema
+                    </div>
+                    <div className="schema-toggle">
+                      {schemaOpen ? "Collapse" : "View Tables & Columns"}
+                      <span className={`schema-toggle-icon ${schemaOpen ? "open" : ""}`}>▾</span>
+                    </div>
+                  </div>
+                  <div className={`schema-body ${schemaOpen ? "open" : ""}`}>
+                    <SchemaVisualizer schema={customSchema} />
+                  </div>
+                </div>
+              ) : (
+                <div className="db-no-schema-notice">
+                  <span>✅</span>
+                  <div>
+                    <div className="db-no-schema-title">Connected — ready to query</div>
+                    <div className="db-no-schema-sub">
+                      No schema was returned by the connect endpoint. You can still run natural-language queries against your database.
+                    </div>
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Query Input */}
       <section className="query-section">
