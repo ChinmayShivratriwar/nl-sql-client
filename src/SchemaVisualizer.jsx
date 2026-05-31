@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
    3. Loose key-value "employees.id INT PK"
    Returns: Array<{ name:string, columns:Array<{name,type,isPK,isFK,refTable,refCol}> }>
 ───────────────────────────────────────────── */
-function parseSchema(raw) {
+export function parseSchema(raw) {
   if (!raw || typeof raw !== "string") return [];
 
   // ── Strategy 1: already a JSON array

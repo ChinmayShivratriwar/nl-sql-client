@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./App.css";
-import SchemaVisualizer from "./SchemaVisualizer";
+import SchemaVisualizer, { parseSchema } from "./SchemaVisualizer";
 import DbConnectPanel from "./DbConnectPanel";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
@@ -448,6 +448,95 @@ export default function App() {
       {/* Results */}
       {response && (
         <div className="results-section">
+          {/* RAG Schema Optimization Showcase */}
+          {response.retrievedTables && response.retrievedTables.length > 0 && (
+            (() => {
+              const activeSchema = dbMode === "custom" ? customSchema : schema;
+              const allTables = parseSchema(activeSchema);
+              const totalTablesCount = allTables.length;
+              const retrievedTablesCount = response.retrievedTables.length;
+              const reductionRate = totalTablesCount > retrievedTablesCount
+                ? Math.round((1 - retrievedTablesCount / totalTablesCount) * 100)
+                : 0;
+
+              return (
+                <div className="rag-card">
+                  <div className="rag-card-header">
+                    <div className="rag-card-title">
+                      <span>⚡</span> RAG Schema Optimization
+                    </div>
+                    <div className="rag-card-meta">
+                      <span className="badge badge-rag-active">
+                        🔍 Context Narrowed
+                      </span>
+                    </div>
+                  </div>
+                  <div className="rag-card-body">
+                    {/* Visual Meter */}
+                    {totalTablesCount > 0 && (
+                      <div className="rag-meter-section">
+                        <div className="rag-meter-label-row">
+                          <span>Context Optimization</span>
+                          {reductionRate > 0 && (
+                            <span className="rag-reduction-percentage">
+                              {reductionRate}% Prompt Size Reduction
+                            </span>
+                          )}
+                        </div>
+                        <div className="rag-meter-container">
+                          <div
+                            className="rag-meter-fill"
+                            style={{ width: `${Math.max(15, Math.min(100, (retrievedTablesCount / totalTablesCount) * 100))}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Stats Row */}
+                    <div className="rag-stats-row">
+                      <div className="rag-stat-box">
+                        <span className="rag-stat-label">Total Tables</span>
+                        <span className="rag-stat-value">
+                          {totalTablesCount || "—"}
+                        </span>
+                      </div>
+                      <div className="rag-stat-box">
+                        <span className="rag-stat-label">RAG Selected</span>
+                        <span className="rag-stat-value highlight">
+                          {retrievedTablesCount}
+                        </span>
+                      </div>
+                      <div className="rag-stat-box">
+                        <span className="rag-stat-label">Status</span>
+                        <span className="rag-stat-value success">
+                          {reductionRate > 0 ? "Optimized" : "Full Schema"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Selected Table Badges */}
+                    <div className="rag-badges-section">
+                      <span className="rag-badges-label">Focused Database Tables</span>
+                      <div className="rag-table-badges">
+                        {response.retrievedTables.map((table, idx) => (
+                          <div key={idx} className="rag-table-badge">
+                            <span className="rag-table-badge-icon">⬡</span>
+                            {table}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Captioned Explanation */}
+                    <div className="rag-explanation">
+                      To answer your question, the NL-SQL engine bypassed redundant schema data and narrowed down the prompt context to the <span className="rag-explanation-highlight">{retrievedTablesCount} most relevant table{retrievedTablesCount !== 1 ? "s" : ""}</span>. This reduced LLM token load, ensuring a highly accurate query generation in just <span className="rag-explanation-highlight">{response.executionTimeMs}ms</span>.
+                    </div>
+                  </div>
+                </div>
+              );
+            })()
+          )}
+
           {/* Generated SQL */}
           <div className="sql-card">
             <div className="sql-card-header">
